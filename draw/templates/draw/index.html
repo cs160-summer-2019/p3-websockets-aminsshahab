@@ -20,17 +20,68 @@
 </body>
 <script>
 
-    // setting up the canvas and one paper tool
-    var canvas = document.getElementById('myCanvas');
-    paper.setup(canvas);
-    var tool = new paper.Tool();
+//   taken from https://stackoverflow.com/questions/1484506/random-color-generator
+  function getRandomColor() {
+    var letters = '0123456789ABCDEF';
+    var color = '#';
+    
+    for (var i = 0; i < 6; i++) {
+      color += letters[Math.floor(Math.random() * 16)];
+    }
+    
+    return color;
+  }
+  
+  // setting up the canvas and one paper tool
+  var canvas = document.getElementById('myCanvas');
+  paper.setup(canvas);
+  var tool = new paper.Tool();
 
-    // getting the URL (you may want to use for Exercise 3)
-    var url = window.location.href;
+  // getting the URL (you may want to use for Exercise 3)
+  var url = window.location.href;
+  
+  var users = {};
+  
+  var userId = Math.random();
 
-    // var socket = new WebSocket(
-    //     'wss://<your url here>/ws/draw');
+  var color = getRandomColor();
 
+  var socket = new WebSocket('wss://p3-websockets-aminsshahab-sgamin232731.codeanyapp.com/ws/draw');
 
+  tool.onMouseMove = function(event) {
+    socket.send(JSON.stringify({x: event.point.x, y: event.point.y, user: userId, color: color, url: url}));
+  };
+  
+  socket.onmessage = function(receivedMessage) {
+    var receivedMessageData = JSON.parse(receivedMessage.data);
+    
+    if (!(receivedMessageData.user in users)) {
+     users[receivedMessageData.user] = new paper.Path();
+    };
+    
+    if (url == 'https://p3-websockets-aminsshahab-sgamin232731.codeanyapp.com/draw/?size=large') {
+      users[receivedMessageData.user].strokeColor = receivedMessageData.color;
+      var point = new paper.Point(receivedMessageData.x, receivedMessageData.y);
+      users[receivedMessageData.user].add(point);
+    } else if (receivedMessageData.user == userId) {
+      users[receivedMessageData.user].strokeColor = receivedMessageData.color;
+      var point = new paper.Point(receivedMessageData.x, receivedMessageData.y);
+      users[receivedMessageData.user].add(point);
+    }
+  };
+  
+  $(document).ready(function() {
+    window.addEventListener('devicemotion', function(event) {
+      if ((Math.abs(event.acceleration.x) > 20) && (Math.abs(event.acceleration.y) > 20)) {
+        paper.project.clear();
+      }
+    });
+    
+    window.addEventListener('deviceorientation', function(event) {
+      if (event.gamma > 30) {
+        color = getRandomColor(); 
+      }
+    });
+  });
 </script>
 </html>
